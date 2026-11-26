@@ -1,9 +1,9 @@
 # Финальный прогон стенда
 
-- дата: 2026-11-26 11:26 UTC
-- ветка: publish
-- коммит: b5bec4a iac-lab: safe IaC packet (final)
-- файлов в индексе: 38
+- дата: 2026-11-26 12:40 UTC
+- ветка: main
+- коммит: f14f5e7
+- файлов в индексе: 40
 
 ## 1. Инструменты (scripts/tools.sh)
 
@@ -81,7 +81,7 @@ FAIL: слой "conftest (terraform plan, --fail-on-warn)" упал с кодо�
 
 ## 7. Секреты
 рабочее дерево (values): charts/launch-control/values-prod.yaml:0 charts/launch-control/values.yaml:0 
-история publish: 0
+история main: 0
 docs/ (все файлы): 0
 
 ## 8. Запрещённые файлы в индексе
