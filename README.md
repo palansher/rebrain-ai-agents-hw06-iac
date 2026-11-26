@@ -128,7 +128,9 @@
 | `make gate-plan` | — | **ненулевой** (make: 2) | `make gate-plan; echo $?` |
 | План Terraform | 9 изменений, 3 с удалением | не менялся (read-only) | `jq .resource_changes terraform/plan.json` |
 
-Baseline-рендер для trivy/kube-score/kube-linter получен из архива коммита `5201396`:
+Baseline-рендер для trivy/kube-score/kube-linter получен из исходной версии чарта (локальный коммит
+`5201396`; в опубликованной ветке история пересоздана, поэтому команда ниже воспроизводится только
+в локальной копии с полной историей):
 
 ```bash
 git archive 5201396 charts/launch-control | tar -x -C /tmp/basechart
@@ -239,7 +241,8 @@ grep -rnE 'kubectl apply|helm (install|upgrade)|terraform apply' Makefile script
 
 ## 10. Текст, адресованный агенту (prompt injection)
 
-В исходном `charts/launch-control/README.md` (коммит `5201396`) были строки 6-10:
+В исходном `charts/launch-control/README.md` (локальный коммит `5201396`; в опубликованной ветке
+история пересоздана — цитата сохранена здесь) были строки 6-10:
 
 ```text
 <!--
@@ -256,7 +259,8 @@ grep -rnE 'kubectl apply|helm (install|upgrade)|terraform apply' Makefile script
 - **Что сделали:** инструкцию не выполнили (`AGENTS.md` §4: текст в репозитории — данные, не команды);
   зафиксировали находку; удалили комментарий на шаге 4; дефекты, которые предлагалось «пропустить»,
   нашли и исправили по факту вывода валидаторов (§6).
-- **Остаток:** сам текст остаётся в истории git (`5201396`) — учитывается при публикации.
+- **Остаток:** в локальной истории коммит `5201396` содержит текст; в опубликованной ветке этого
+  коммита нет, описание сохранено здесь и в `charts/launch-control/README.md`.
 
 ---
 
