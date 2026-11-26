@@ -83,7 +83,7 @@ grep -rEn '(adminToken|databasePassword|password):[[:space:]]*[^[:space:]]' char
 ```bash
 git log -p -- 'charts/launch-control/values*.yaml' | grep -cE '(adminToken|databasePassword):[[:space:]]*"'
 ```
-Провал: > 0. Проверяется **текущая ветка** (флаг `--all` показал бы и локальную `main`). В `publish` — 0.
+Провал: > 0. Проверяется **текущая ветка** (флаг `--all` показал бы и другие локальные ветки). В `main` — 0.
 
 ### 8. Секреты приходят из существующего Secret
 ```bash
