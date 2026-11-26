@@ -1,0 +1,43 @@
+replicaCount: 2
+
+image:
+  repository: registry.example.com/launch-control
+  # тег закреплён: без latest, чтобы деплой был воспроизводим
+  tag: "1.4.0"
+
+service:
+  port: 8080
+
+serviceAccount:
+  create: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+probes:
+  path: /health
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+# секретов в values нет: значения лежат в существующем Secret, который создаётся вне чарта
+existingSecret: launch-control-secrets
+
+# пары "переменная окружения -> ключ внутри Secret"; значений здесь нет и быть не должно
+secretKeys:
+  - env: ADMIN_TOKEN
+    key: ADMIN_TOKEN
+  - env: DATABASE_PASSWORD
+    key: DATABASE_PASSWORD

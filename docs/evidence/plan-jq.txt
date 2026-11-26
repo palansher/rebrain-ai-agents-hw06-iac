@@ -1,0 +1,97 @@
+# Независимая проверка terraform/plan.json (без агента)
+
+## 1. Все изменения и actions
+$ jq -r '.resource_changes[] | "\(.address)\t\(.change.actions|join(","))"' terraform/plan.json
+aws_db_instance.launch_manifest	delete,create
+aws_db_parameter_group.legacy	delete
+aws_ecs_task_definition.api	create,delete
+aws_iam_policy.api	update
+aws_security_group.api	update
+aws_cloudwatch_log_group.api	create
+aws_s3_bucket.artifacts	no-op
+aws_ecs_service.api	update
+aws_ssm_parameter.app_env	update
+
+## 2. Изменения с delete (replace = delete+create)
+$ jq -r '.resource_changes[] | select(.change.actions | index("delete")) | .address' terraform/plan.json
+aws_db_instance.launch_manifest
+aws_db_parameter_group.legacy
+aws_ecs_task_definition.api
+
+## 3. RDS: before/after
+$ jq -r '.resource_changes[] | select(.address=="aws_db_instance.launch_manifest") | .change' terraform/plan.json
+{
+  "actions": [
+    "delete",
+    "create"
+  ],
+  "before": {
+    "engine_version": "15.7",
+    "skip_final_snapshot": false,
+    "deletion_protection": true,
+    "backup_retention_period": 7
+  },
+  "after": {
+    "engine_version": "16.3",
+    "skip_final_snapshot": true,
+    "deletion_protection": false,
+    "backup_retention_period": 0
+  }
+}
+
+## 4. IAM: before/after policy
+$ jq -r '.resource_changes[] | select(.address=="aws_iam_policy.api") | .change.before.policy, .change.after.policy' terraform/plan.json
+{"Statement":[{"Action":["s3:GetObject","s3:PutObject"],"Resource":["arn:aws:s3:::launch-artifacts/*"]}]}
+{"Statement":[{"Action":["*"],"Resource":["*"]}]}
+
+## 5. Security group: before/after
+$ jq -r '.resource_changes[] | select(.address=="aws_security_group.api") | .change' terraform/plan.json
+{
+  "actions": [
+    "update"
+  ],
+  "before": {
+    "ingress": [
+      {
+        "from_port": 22,
+        "to_port": 22,
+        "cidr_blocks": [
+          "10.0.0.0/8"
+        ]
+      }
+    ]
+  },
+  "after": {
+    "ingress": [
+      {
+        "from_port": 22,
+        "to_port": 22,
+        "cidr_blocks": [
+          "0.0.0.0/0"
+        ]
+      }
+    ]
+  }
+}
+
+## 6. Верхнеуровневые ключи плана
+$ jq -r 'keys' terraform/plan.json
+[
+  "format_version",
+  "resource_changes",
+  "terraform_version"
+]
+
+## 7. Ключи change (полнота)
+$ jq -r '[.resource_changes[].change | keys[]] | unique' terraform/plan.json
+[
+  "actions",
+  "after",
+  "before"
+]
+
+## 8. Есть ли provider_version у resource_change
+$ jq -r '[.resource_changes[] | has("provider_version")] | unique' terraform/plan.json
+[
+  false
+]

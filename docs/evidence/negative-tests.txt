@@ -1,0 +1,137 @@
+
+### 1. appVersion числом -> helm lint --strict
+==> Linting charts/launch-control
+[ERROR] Chart.yaml: appVersion should be of type string but it's of type float64
+[INFO] Chart.yaml: icon is recommended
+
+Error: 1 chart(s) linted, 1 chart(s) failed
+exit=1
+
+### 1b. appVersion числом -> make validate
+
+=== [1/6] helm lint --strict ===
+==> Linting charts/launch-control
+[ERROR] Chart.yaml: appVersion should be of type string but it's of type float64
+[INFO] Chart.yaml: icon is recommended
+
+Error: 1 chart(s) linted, 1 chart(s) failed
+
+FAIL: слой "helm lint --strict (charts/launch-control/values-prod.yaml)" упал с кодом 1 — пайплайн остановлен.
+make: *** [Makefile:25: validate] Error 1
+exit=2
+
+### 2. apps/v1beta2 -> helm template + kubeconform
+stdin - Deployment lc-launch-control failed validation: could not find schema for Deployment
+Summary: 3 resources found parsing stdin - Valid: 2, Invalid: 0, Errors: 1, Skipped: 0
+exit=1
+
+### 3. privileged -> conftest
+[31mFAIL[0m - - main - Deployment "lc-launch-control": контейнер "launch-control" запущен с privileged: true
+
+[31m51 tests, 50 passed, 0 warnings, 1 failure, 0 exceptions[0m
+exit=1
+
+### 3b. privileged -> make validate
+
+=== [1/6] helm lint --strict ===
+==> Linting charts/launch-control
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+  OK: helm lint --strict (charts/launch-control/values-prod.yaml)
+
+=== [2/6] helm template -> kubeconform (Kubernetes 1.29.0) ===
+  OK: helm template (рендер)
+Summary: 3 resources found in 1 file - Valid: 3, Invalid: 0, Errors: 0, Skipped: 0
+  OK: kubeconform (helm, 1.29.0)
+
+=== [3/6] kubectl kustomize -> kubeconform (Kubernetes 1.29.0) ===
+  OK: kustomize build (рендер)
+Summary: 2 resources found in 1 file - Valid: 2, Invalid: 0, Errors: 0, Skipped: 0
+  OK: kubeconform (kustomize, 1.29.0)
+
+=== [4/6] conftest: отрендеренные манифесты ===
+[31mFAIL[0m - /tmp/tmp.NaEaRbRtAx/helm-render.yaml - main - Deployment "lc-launch-control": контейнер "launch-control" запущен с privileged: true
+
+[31m51 tests, 50 passed, 0 warnings, 1 failure, 0 exceptions[0m
+
+FAIL: слой "conftest (helm-манифесты)" упал с кодом 1 — пайплайн остановлен.
+make: *** [Makefile:25: validate] Error 1
+exit=2
+
+### 4. патч env/3 -> kubectl kustomize
+error: replace operation does not apply: doc is missing path: /spec/template/spec/containers/0/env/3/value: missing value
+exit=1
+
+### 5. секрет в values -> score.sh
+
+=== score: Safe IaC packet ===
+
+  [32m✓[0m helm lint  
+  [32m✓[0m helm template (рендер)  
+  [32m✓[0m kubeconform (helm)  
+  [32m✓[0m kustomize build  
+  [32m✓[0m kubeconform (kustomize)  
+  [32m✓[0m policy: манифесты  
+  [32m✓[0m policy: terraform plan  
+  [31m✗[0m нет секретов в values  1 подозрительных строк
+
+  Готово: 7/8
+  В terraform/plan.json: 9 изменений, из них с удалением ресурса: 3
+
+exit=1
+
+### 5b. секрет в values -> make validate
+
+=== [1/6] helm lint --strict ===
+==> Linting charts/launch-control
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+  OK: helm lint --strict (charts/launch-control/values-prod.yaml)
+
+=== [2/6] helm template -> kubeconform (Kubernetes 1.29.0) ===
+  OK: helm template (рендер)
+Summary: 3 resources found in 1 file - Valid: 3, Invalid: 0, Errors: 0, Skipped: 0
+  OK: kubeconform (helm, 1.29.0)
+
+=== [3/6] kubectl kustomize -> kubeconform (Kubernetes 1.29.0) ===
+  OK: kustomize build (рендер)
+Summary: 2 resources found in 1 file - Valid: 2, Invalid: 0, Errors: 0, Skipped: 0
+  OK: kubeconform (kustomize, 1.29.0)
+
+=== [4/6] conftest: отрендеренные манифесты ===
+
+[32m51 tests, 51 passed, 0 warnings, 0 failures, 0 exceptions[0m
+  OK: conftest (helm-манифесты)
+[33mWARN[0m - /tmp/tmp.plrkP7oLvm/kustomize-render.yaml - main - Deployment "launch-control": pod securityContext.runAsNonRoot не выставлен в true
+[33mWARN[0m - /tmp/tmp.plrkP7oLvm/kustomize-render.yaml - main - Deployment "launch-control": контейнер "launch-control" без livenessProbe
+[33mWARN[0m - /tmp/tmp.plrkP7oLvm/kustomize-render.yaml - main - Deployment "launch-control": контейнер "launch-control" без readinessProbe
+[33mWARN[0m - /tmp/tmp.plrkP7oLvm/kustomize-render.yaml - main - Deployment "launch-control": контейнер "launch-control" без resources.limits
+[33mWARN[0m - /tmp/tmp.plrkP7oLvm/kustomize-render.yaml - main - Deployment "launch-control": контейнер "launch-control" без resources.requests
+
+[33m34 tests, 29 passed, 5 warnings, 0 failures, 0 exceptions[0m
+  OK: conftest (kustomize-манифесты)
+
+=== [5/6] conftest: terraform/plan.json ===
+[33mWARN[0m - terraform/plan.json - main - aws_db_instance.launch_manifest (aws_db_instance): stateful-ресурс затрагивается действием "delete/create" — риск потери данных
+[33mWARN[0m - terraform/plan.json - main - aws_db_parameter_group.legacy (aws_db_parameter_group): stateful-ресурс затрагивается действием "delete" — риск потери данных
+[33mWARN[0m - terraform/plan.json - main - aws_iam_policy.api: IAM-политика разрешает Action "*" — полные права на действия
+[33mWARN[0m - terraform/plan.json - main - aws_iam_policy.api: IAM-политика разрешает Resource "*" — права на все ресурсы
+[33mWARN[0m - terraform/plan.json - main - aws_security_group.api: SSH (порт 22) открыт для 0.0.0.0/0 — оставьте доступ только из bastion/VPN
+
+[33m17 tests, 12 passed, 5 warnings, 0 failures, 0 exceptions[0m
+  OK: conftest (terraform plan)
+
+=== [6/6] секреты в values ===
+  FAIL: в values найдено 1 строк с секретами
+
+FAIL: слой "нет секретов в values" упал с кодом 1 — пайплайн остановлен.
+make: *** [Makefile:25: validate] Error 1
+exit=2
+
+### git status после откатов
+ M README.md
+?? docs/agent/readme-draft-review.md
+?? docs/agent/readme-draft.md
+?? docs/evidence/negative-tests.txt
