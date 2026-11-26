@@ -1,0 +1,102 @@
+# Финальный прогон стенда
+
+- дата: 2026-11-26 11:26 UTC
+- ветка: publish
+- коммит: b5bec4a iac-lab: safe IaC packet (final)
+- файлов в индексе: 38
+
+## 1. Инструменты (scripts/tools.sh)
+
+Инструменты стенда (вариант A)
+
+  ✓ helm         version.BuildInfo{Version:"v3.20.0", GitCommit:"b2e4314fa0f229a1de7b4c981273f61d69ee5a59", GitTreeState:"clean", GoVersion:"go1.25.6"}
+  ✗ kustomize    НЕТ - входит в kubectl: kubectl kustomize
+  ✓ kubectl      Client Version: v1.32.1
+  ✓ kubeconform  v0.8.0
+  ✓ conftest     Conftest: 0.71.1
+  ✓ jq           jq-1.7
+
+Окружение готово. Дальше: ./scripts/score.sh --save baseline
+exit=0
+
+## 2. Табло (scripts/score.sh)
+
+=== score: Safe IaC packet ===
+
+  ✓ helm lint  
+  ✓ helm template (рендер)  
+  ✓ kubeconform (helm)  
+  ✓ kustomize build  
+  ✓ kubeconform (kustomize)  
+  ✓ policy: манифесты  
+  ✓ policy: terraform plan  
+  ✓ нет секретов в values  
+
+  Готово: 8/8
+  В terraform/plan.json: 9 изменений, из них с удалением ресурса: 3
+
+exit=0
+
+## 3. make validate
+=== [1/6] helm lint --strict ===
+  OK: helm lint --strict (charts/launch-control/values-prod.yaml)
+=== [2/6] helm template -> kubeconform (Kubernetes 1.29.0) ===
+  OK: helm template (рендер)
+Summary: 3 resources found in 1 file - Valid: 3, Invalid: 0, Errors: 0, Skipped: 0
+  OK: kubeconform (helm, 1.29.0)
+=== [3/6] kubectl kustomize -> kubeconform (Kubernetes 1.29.0) ===
+  OK: kustomize build (рендер)
+Summary: 2 resources found in 1 file - Valid: 2, Invalid: 0, Errors: 0, Skipped: 0
+  OK: kubeconform (kustomize, 1.29.0)
+=== [4/6] conftest: отрендеренные манифесты ===
+  OK: conftest (helm-манифесты)
+  OK: conftest (kustomize-манифесты)
+=== [5/6] conftest: terraform/plan.json ===
+  OK: conftest (terraform plan)
+=== [6/6] секреты в values ===
+  OK: нет секретов в values
+PASS: все слои пройдены (Kubernetes 1.29.0).
+exit=0
+
+## 4. make gate-plan (ожидается ненулевой)
+=== [gate-plan] gate: conftest terraform/plan.json --fail-on-warn ===
+WARN - terraform/plan.json - main - aws_db_instance.launch_manifest (aws_db_instance): stateful-ресурс затрагивается действием "delete/create" — риск потери данных
+WARN - terraform/plan.json - main - aws_db_parameter_group.legacy (aws_db_parameter_group): stateful-ресурс затрагивается действием "delete" — риск потери данных
+WARN - terraform/plan.json - main - aws_iam_policy.api: IAM-политика разрешает Action "*" — полные права на действия
+WARN - terraform/plan.json - main - aws_iam_policy.api: IAM-политика разрешает Resource "*" — права на все ресурсы
+WARN - terraform/plan.json - main - aws_security_group.api: SSH (порт 22) открыт для 0.0.0.0/0 — оставьте доступ только из bastion/VPN
+17 tests, 12 passed, 5 warnings, 0 failures, 0 exceptions
+FAIL: слой "conftest (terraform plan, --fail-on-warn)" упал с кодом 1 — пайплайн остановлен.
+exit=2
+
+## 5. make ci (validate + gate-plan, ожидается ненулевой)
+exit=2
+PASS: все слои пройдены (Kubernetes 1.29.0).
+FAIL: слой "conftest (terraform plan, --fail-on-warn)" упал с кодом 1 — пайплайн остановлен.
+
+## 6. conftest по трём входам
+51 tests, 51 passed, 0 warnings, 0 failures, 0 exceptions
+34 tests, 29 passed, 5 warnings, 0 failures, 0 exceptions
+17 tests, 12 passed, 5 warnings, 0 failures, 0 exceptions
+
+## 7. Секреты
+рабочее дерево (values): charts/launch-control/values-prod.yaml:0 charts/launch-control/values.yaml:0 
+история publish: 0
+docs/ (все файлы): 0
+
+## 8. Запрещённые файлы в индексе
+нет
+
+## 9. Версии
+v3.20.0+gb2e4314
+Client Version: v1.32.1
+v0.8.0
+Conftest: 0.71.1
+Version: 0.76.2
+Terraform v1.10.1
+jq-1.7
+GNU Make 4.3
+opencode v2.4.1
+
+> Примечание: `✗ kustomize` в scripts/tools.sh — ожидаемый ложный минус: standalone-бинарник не нужен,
+> используется `kubectl kustomize` (проверяется слоями 4-5 табло).

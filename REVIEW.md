@@ -81,9 +81,9 @@ grep -rEn '(adminToken|databasePassword|password):[[:space:]]*[^[:space:]]' char
 
 ### 7. Секретов нет в истории git публикуемой ветки
 ```bash
-git log -p --all -- 'charts/launch-control/values*.yaml' | grep -cE '(adminToken|databasePassword):[[:space:]]*"'
+git log -p -- 'charts/launch-control/values*.yaml' | grep -cE '(adminToken|databasePassword):[[:space:]]*"'
 ```
-Провал: > 0. До публикации из orphan-ветки локально ожидаемо > 0; в публикуемой ветке обязано быть 0.
+Провал: > 0. Проверяется **текущая ветка** (флаг `--all` показал бы и локальную `main`). В `publish` — 0.
 
 ### 8. Секреты приходят из существующего Secret
 ```bash

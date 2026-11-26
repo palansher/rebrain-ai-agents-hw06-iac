@@ -181,7 +181,7 @@ kubectl kustomize /tmp/ovl | kubeconform -strict -kubernetes-version 1.29.0
 | Service для Ingress отсутствует в чарте | добавление ресурса вне scope шагов | `kube-score [CRITICAL] Ingress targets Service`; Ingress не заработает |
 | NetworkPolicy, podAntiAffinity, ephemeral-storage, `imagePullPolicy`, PDB в чарте | вне scope, нет кластера для проверки поведения | 6 CRITICAL у kube-score, 1 ошибка kube-linter |
 | trivy `KSV-0110` (namespace `default`), `KSV-0125` (untrusted registry) | namespace и реестр задаются окружением | 2 находки trivy |
-| Секреты в истории git (12 строк в `values*.yaml`) | удаление из рабочего дерева не чистит историю | нужна ротация креденшелов и публикация из чистой ветки (`git checkout --orphan publish`) |
+| Секреты в истории исходной ветки `main` (12 строк в `values*.yaml`) | история `main` не переписывалась; ветка `publish` пересоздана с нуля | в `publish` секретов нет (проверено); на GitHub старую `main` нужно заменить/удалить, иначе прежняя история останется доступной |
 | `terraform/plan.json` — выжимка | нет `planned_values`, `prior_state`, `configuration`, `after_unknown` | нельзя подтвердить drift, порядок операций, unknown-значения |
 | Policy не покрывает `initContainers`, `ephemeralContainers`, `CronJob`, `NotAction`/`NotResource`, `egress`, `aws_security_group_rule` | минимум задания; список — в `policy/README.md` | часть рисков не детектируется |
 | Поведение приложения (`/health`, запись в `/var/log`) | нет кластера и образа | возможен CrashLoopBackOff при неверных предположениях |
@@ -294,11 +294,19 @@ make gate-plan; echo "gate exit=$?"       # ненулевой (make: 2) - бл�
 K8S_VERSION=1.30.0 make validate         # версия переопределяется
 ```
 
-Публикация: репозиторий без `.env`, `.venv`, дампов и значений секретов. В истории текущей ветки
-остались синтетические секреты из baseline, поэтому публиковать из отдельной ветки:
+Публикация: ветка `publish` создана как orphan — один коммит, секретов в ней нет
+(`git grep ... $(git rev-list HEAD)` → 0). Локальная `main` сохраняет исходную историю с синтетическими
+секретами и не публикуется:
 
 ```bash
 git checkout --orphan publish && git add -A && git commit -m "iac-lab: safe IaC packet (final)"
+```
+
+Если репозиторий уже был запушен раньше (в нём осталась старая `main`), её нужно заменить, иначе
+прежние коммиты останутся доступны на GitHub:
+
+```bash
+git push --force origin publish:main      # или пересоздать репозиторий и запушить один коммит
 ```
 
 Полный набор негативных тестов (дефект возвращён → ненулевой код → откат) — в
